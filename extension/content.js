@@ -81,8 +81,8 @@
 
   // ---- UI: confirm modal ----
   let modal;
-  function openModal(mode) {
-    const senders = getSelectedSenders();
+  function openModal(mode, sendersOverride) {
+    const senders = sendersOverride ?? getSelectedSenders();
     if (senders.length === 0) return;
 
     let period = "all";
@@ -302,10 +302,117 @@
     return String(s).replace(/["\\]/g, "\\$&");
   }
 
+
+  // ── Spam Radar panel (bottom-right collapsible) ──────────────────────
+  let spamPanel, spamListEl, spamCache = null, spamLoading = false, panelOpen = false;
+
+  function buildSpamPanel() {
+    if (document.getElementById("smc-radar")) return;
+    spamPanel = document.createElement("div");
+    spamPanel.id = "smc-radar";
+    spamPanel.innerHTML = `
+      <button id="smc-radar-toggle">
+        <span id="smc-radar-title">Spam Radar</span>
+        <span id="smc-radar-arrow">&#9650;</span>
+      </button>
+      <div id="smc-radar-body">
+        <div id="smc-radar-meta">
+          <span id="smc-radar-subtitle">Top senders by spam signal</span>
+          <button id="smc-radar-refresh" title="Refresh">&#8635;</button>
+        </div>
+        <div id="smc-radar-list"></div>
+      </div>
+    `;
+    document.body.appendChild(spamPanel);
+    spamListEl = spamPanel.querySelector("#smc-radar-list");
+    spamPanel.querySelector("#smc-radar-toggle").addEventListener("click", toggleRadar);
+    spamPanel.querySelector("#smc-radar-refresh").addEventListener("click", (e) => {
+      e.stopPropagation();
+      spamCache = null;
+      loadRadar();
+    });
+  }
+
+  function toggleRadar() {
+    panelOpen = !panelOpen;
+    spamPanel.classList.toggle("smc-radar-open", panelOpen);
+    spamPanel.querySelector("#smc-radar-arrow").innerHTML = panelOpen ? "&#9660;" : "&#9650;";
+    if (panelOpen && !spamCache && !spamLoading) loadRadar();
+  }
+
+  async function loadRadar() {
+    if (spamLoading) return;
+    spamLoading = true;
+    spamListEl.innerHTML = `<div class="smc-radar-loading">Scanning inbox&hellip;</div>`;
+    try {
+      const senders = await send("scanSenders", {});
+      spamCache = senders;
+      renderRadar(senders);
+    } catch (e) {
+      spamListEl.innerHTML = `<div class="smc-radar-msg">Error: ${escapeHtml(e.message)}</div>`;
+    } finally {
+      spamLoading = false;
+    }
+  }
+
+  function scoreBadge(score) {
+    if (score >= 70) return { label: "High", cls: "smc-badge-high" };
+    if (score >= 40) return { label: "Med",  cls: "smc-badge-med" };
+    return                { label: "Low",  cls: "smc-badge-low" };
+  }
+
+  function whyTags(s) {
+    const t = [];
+    if (s.unreadRatio >= 0.8) t.push("Never read");
+    else if (s.unreadRatio >= 0.5) t.push("Rarely read");
+    if (s.hasUnsub) t.push("Newsletter");
+    if (s.isPromo)  t.push("Promo");
+    if (s.total >= 50) t.push("High volume");
+    return t;
+  }
+
+  function renderRadar(senders) {
+    if (!senders || senders.length === 0) {
+      spamListEl.innerHTML = `<div class="smc-radar-msg">No suspicious senders found.</div>`;
+      return;
+    }
+    spamListEl.innerHTML = "";
+    for (const s of senders) {
+      const badge = scoreBadge(s.score);
+      const tags  = whyTags(s);
+      const row = document.createElement("div");
+      row.className = "smc-radar-row";
+      row.innerHTML = `
+        <div class="smc-radar-top">
+          <span class="smc-rbadge ${badge.cls}">${badge.label}</span>
+          <div class="smc-radar-info">
+            <span class="smc-radar-name">${escapeHtml(s.name)}</span>
+            <span class="smc-radar-count">${s.total} emails</span>
+          </div>
+          <div class="smc-radar-btns">
+            <button class="smc-btn smc-btn-teal smc-mini">Unsub</button>
+            <button class="smc-btn smc-btn-rose smc-mini">Clean</button>
+          </div>
+        </div>
+        ${tags.length ? `<div class="smc-radar-tags">${tags.map(t => `<span class="smc-rtag">${t}</span>`).join("")}</div>` : ""}
+      `;
+      const [unsubBtn, cleanBtn] = row.querySelectorAll("button");
+      unsubBtn.addEventListener("click", () => openModalFor("unsubscribe", s));
+      cleanBtn.addEventListener("click", () => openModalFor("delete", s));
+      spamListEl.appendChild(row);
+    }
+  }
+
+  // Open confirm modal for a sender from the radar panel (no Gmail row selection needed)
+  function openModalFor(mode, sender) {
+    openModal(mode, [{ email: sender.email, name: sender.name, subject: "" }]);
+  }
+
   // ---- boot ----
   function init() {
     if (document.getElementById("smc-bar")) return;
     buildBar();
+    buildSpamPanel();
     // Watch for Gmail DOM mutations (checkbox toggles, view switches) instead of
     // polling — fires only when something actually changes, zero idle CPU cost.
     const observer = new MutationObserver(() => refreshBar());
