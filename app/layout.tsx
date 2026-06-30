@@ -9,7 +9,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "InboxPurge",
+  title: "Simple Mail Cleaner",
   description: "Clean up your inbox by sender",
 };
 
