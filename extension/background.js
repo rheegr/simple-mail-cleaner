@@ -69,10 +69,29 @@ async function listAllIds(q) {
 }
 
 async function countBySender(senderEmail) {
-  // resultSizeEstimate is enough for a confirmation preview; avoid full pagination.
-  const params = new URLSearchParams({ q: `from:${senderEmail}`, maxResults: "1" });
-  const data = await gapi(`/messages?${params}`);
-  return data.resultSizeEstimate ?? 0;
+  // Gmail's resultSizeEstimate is unreliable — it returns a near-constant rough
+  // number regardless of the query, so every sender looked identical. Count the
+  // real message ids by paging instead. Cap to keep huge senders responsive.
+  const CAP = 5000;
+  let count = 0;
+  let pageToken;
+  let capped = false;
+  do {
+    const params = new URLSearchParams({
+      q: `from:${senderEmail}`,
+      maxResults: "500",
+      fields: "messages/id,nextPageToken",
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+    const data = await gapi(`/messages?${params}`);
+    count += (data.messages || []).length;
+    pageToken = data.nextPageToken;
+    if (count >= CAP && pageToken) {
+      capped = true;
+      break;
+    }
+  } while (pageToken);
+  return { count, capped };
 }
 
 async function deleteBySender({ senderEmail, period, permanent }) {

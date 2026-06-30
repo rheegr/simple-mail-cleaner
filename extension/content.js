@@ -131,7 +131,7 @@
       send("count", { senderEmail: s.email })
         .then((c) => {
           const el = list.querySelector(`.smc-scount[data-email="${cssEscape(s.email)}"]`);
-          if (el) el.textContent = `${c}`;
+          if (el) el.textContent = c.capped ? `${c.count}+` : `${c.count}`;
         })
         .catch(() => {});
     }
