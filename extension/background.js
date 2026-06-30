@@ -281,6 +281,80 @@ async function unsubscribeBySender({ senderEmail }) {
   return { method: "none", reason: "No usable unsubscribe method" };
 }
 
+
+// Scan recent messages and rank senders by spam likelihood.
+async function scanSenders() {
+  const FETCH_COUNT = 300; // messages to sample
+  const CHUNK = 20;        // parallel metadata requests
+
+  // 1. Collect message IDs
+  const ids = [];
+  let pageToken;
+  do {
+    const params = new URLSearchParams({ maxResults: "100", fields: "messages/id,nextPageToken" });
+    if (pageToken) params.set("pageToken", pageToken);
+    const data = await gapi(`/messages?${params}`);
+    for (const m of data.messages ?? []) ids.push(m.id);
+    pageToken = data.nextPageToken;
+  } while (pageToken && ids.length < FETCH_COUNT);
+
+  // 2. Fetch metadata in parallel chunks
+  const senderMap = new Map(); // email -> { email, name, total, unread, hasUnsub, isPromo }
+
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    const results = await Promise.all(chunk.map(id =>
+      gapi(`/messages/${id}?format=METADATA&metadataHeaders=From&metadataHeaders=List-Unsubscribe&fields=id,labelIds,payload/headers`)
+        .catch(() => null)
+    ));
+
+    for (const msg of results) {
+      if (!msg) continue;
+      const headers = msg.payload?.headers ?? [];
+      const fromHeader = headers.find(h => h.name === "From")?.value ?? "";
+      const hasUnsub = headers.some(h => h.name === "List-Unsubscribe" && h.value);
+      const labels = msg.labelIds ?? [];
+      const isUnread = labels.includes("UNREAD");
+      const isPromo = labels.includes("CATEGORY_PROMOTIONS") || labels.includes("CATEGORY_UPDATES");
+
+      // Parse "Name <email>" or bare email
+      const m = fromHeader.match(/^(.*?)\s*<([^>]+)>$/) || fromHeader.match(/^([^<]+)$/);
+      const email = (m?.[2] ?? fromHeader).toLowerCase().trim();
+      const name = (m?.[1] ?? email).trim().replace(/^"|"$/g, "") || email;
+      if (!email || !email.includes("@")) continue;
+
+      if (!senderMap.has(email)) {
+        senderMap.set(email, { email, name, total: 0, unread: 0, hasUnsub: false, isPromo: false });
+      }
+      const s = senderMap.get(email);
+      s.total++;
+      if (isUnread) s.unread++;
+      if (hasUnsub) s.hasUnsub = true;
+      if (isPromo) s.isPromo = true;
+    }
+  }
+
+  // 3. Score each sender
+  const scored = [];
+  for (const s of senderMap.values()) {
+    if (s.total < 2) continue; // ignore one-offs
+    const unreadRatio = s.total > 0 ? s.unread / s.total : 0;
+    let score = 0;
+    score += unreadRatio * 40;          // 0-40: never read = high signal
+    if (s.hasUnsub) score += 30;        // newsletter header
+    if (s.isPromo) score += 20;         // Gmail categorised as promo
+    score += Math.min(s.total / 50, 1) * 10; // volume bonus (capped at 10)
+    scored.push({ ...s, unreadRatio: Math.round(unreadRatio * 100) / 100, score: Math.round(score) });
+  }
+
+  // 4. Return senders that are suspicious (score >= 35) OR high-volume (total >= 20),
+  //    sorted by score desc then total desc, top 60.
+  return scored
+    .filter(s => s.score >= 35 || s.total >= 20)
+    .sort((a, b) => b.score - a.score || b.total - a.total)
+    .slice(0, 60);
+}
+
 const HANDLERS = {
   ping: async () => ({ ok: true }),
   auth: async () => {
@@ -290,6 +364,7 @@ const HANDLERS = {
   count: (p) => countBySender(p.senderEmail),
   delete: (p) => deleteBySender(p),
   unsubscribe: (p) => unsubscribeBySender(p),
+  scanSenders: () => scanSenders(),
 };
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
