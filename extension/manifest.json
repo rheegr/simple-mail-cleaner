@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Simple Mail Cleaner",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Select an email in Gmail and unsubscribe or clean out its entire sender in one click.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsdpvJUwluam76TdDqTg6vk0GcQ2AmJ3840AeH9d/TLIkQwoRgxP6wQQlVYR82QoHPJTKfDY0zU8JjFo27W6RBp77sM40UTS4ee+ARlFgIQXAeN3tXpWICV5GrVzy6EJXAtLe2UcfP7l6XNhd2fQXxf3sVT0Yq9STo1vZwxBimDvjalS5ZIJPPH3nhwUDQzUJkKHaqeDbiCG8TkkP/vUrPHdkOJ46UiU2DjSHb+3Q4gTHmWdWDvDOywoyUpLcUA/utg44WF19GmMYhwt/CggvDtGJNL7VBkeb4/VOxHbRBCSm3QGaK2xlHcXMTEPq1Jwod+gw30GU4aGF7QG2+LhPhwIDAQAB",
   "permissions": ["identity", "storage", "scripting", "tabs"],

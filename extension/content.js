@@ -226,9 +226,9 @@
     }
 
     // The API moved the mail to Trash, but the open Gmail view doesn't know yet,
-    // so the rows linger until the user navigates. Re-fetch the current view so
-    // they disappear right away. Debounced so concurrent jobs refresh once.
-    scheduleRefresh();
+    // so the rows linger. Hide this sender's still-visible rows in place — no
+    // full refresh, so the scroll position is left exactly where it was.
+    hideSenderRows(senders.map((s) => s.email));
   }
 
   // Uncheck every currently-selected Gmail row so the next pick starts clean.
@@ -241,22 +241,15 @@
     lastKey = "__force__"; // force the action bar to re-evaluate and hide
   }
 
-  // Click Gmail's own Refresh button to re-fetch the current list view.
-  function refreshGmail() {
-    const els = document.querySelectorAll("[role='button'][aria-label], [data-tooltip]");
-    for (const el of els) {
-      const label = el.getAttribute("aria-label") || el.getAttribute("data-tooltip") || "";
-      if (/refresh|새로고침/i.test(label)) {
-        el.click();
-        return true;
-      }
+  // Hide the just-cleaned sender's still-visible rows in place. No full refresh,
+  // so the user's scroll position never moves. Gmail rebuilds the list on its
+  // own later, by which point these are genuinely gone from the view.
+  function hideSenderRows(emails) {
+    const set = new Set(emails.map((e) => e.toLowerCase()));
+    for (const row of document.querySelectorAll("tr.zA")) {
+      const email = (row.querySelector("span[email]")?.getAttribute("email") || "").toLowerCase();
+      if (set.has(email)) row.style.display = "none";
     }
-    return false;
-  }
-  let refreshTimer = null;
-  function scheduleRefresh() {
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refreshGmail, 700);
   }
 
   // ---- UI: toast (stacked, dismiss after `duration` ms; 0 = sticky) ----
