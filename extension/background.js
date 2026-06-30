@@ -197,7 +197,10 @@ async function openUnsubPage(url) {
   });
 
   try {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: autoClickUnsub });
+    const results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: autoClickUnsub });
+    const clicked = results?.[0]?.result;
+    // Give the page a moment to process the click, then close.
+    if (clicked) setTimeout(() => chrome.tabs.remove(tab.id).catch(() => {}), 1200);
     return { method: "page-auto", url };
   } catch (e) {
     return { method: "page-manual", url, error: e.message };
@@ -205,18 +208,25 @@ async function openUnsubPage(url) {
 }
 
 async function unsubscribeBySender({ senderEmail }) {
-  // Find a recent message from this sender to read its List-Unsubscribe header.
-  const params = new URLSearchParams({ q: `from:${senderEmail}`, maxResults: "1" });
+  // Check up to 5 recent messages — some senders omit the header on newer emails.
+  const params = new URLSearchParams({ q: `from:${senderEmail}`, maxResults: "5" });
   const list = await gapi(`/messages?${params}`);
-  const msgId = list.messages?.[0]?.id;
-  if (!msgId) return { method: "none", reason: "No messages found" };
+  const msgIds = (list.messages ?? []).map((m) => m.id);
+  if (!msgIds.length) return { method: "none", reason: "No messages found" };
 
-  const msg = await gapi(
-    `/messages/${msgId}?format=METADATA&metadataHeaders=List-Unsubscribe&metadataHeaders=List-Unsubscribe-Post`
-  );
-  const headers = msg.payload?.headers ?? [];
-  const raw = headers.find((h) => h.name === "List-Unsubscribe")?.value ?? "";
-  const isOneClick = headers.some((h) => h.name === "List-Unsubscribe-Post");
+  let raw = "", isOneClick = false;
+  for (const msgId of msgIds) {
+    const msg = await gapi(
+      `/messages/${msgId}?format=METADATA&metadataHeaders=List-Unsubscribe&metadataHeaders=List-Unsubscribe-Post`
+    );
+    const headers = msg.payload?.headers ?? [];
+    const candidate = headers.find((h) => h.name === "List-Unsubscribe")?.value ?? "";
+    if (candidate) {
+      raw = candidate;
+      isOneClick = headers.some((h) => h.name === "List-Unsubscribe-Post");
+      break;
+    }
+  }
 
   const urls = [...raw.matchAll(/<(https?:\/\/[^>]+)>/g)].map((m) => m[1]);
   const mailtos = [...raw.matchAll(/<(mailto:[^>]+)>/g)].map((m) => m[1]);
