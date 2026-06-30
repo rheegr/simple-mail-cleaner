@@ -374,9 +374,9 @@ async function scanSenders() {
 
   // Filter: must have meaningful spam signals
   return scored
-    .filter(s => s.score >= 35 || (s.hasUnsub && s.total >= 5))
+    .filter(s => s.score >= 25 || s.total >= 10)
     .sort((a, b) => b.score - a.score || b.total - a.total)
-    .slice(0, 60);
+    .slice(0, 100);
 }
 
 async function senderPreview({ senderEmail }) {
