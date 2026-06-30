@@ -379,6 +379,21 @@ async function scanSenders() {
     .slice(0, 60);
 }
 
+async function senderPreview({ senderEmail }) {
+  const q = `from:${senderEmail}`;
+  const data = await gapi(`/messages?${new URLSearchParams({ q, maxResults: "5", fields: "messages/id" })}`);
+  const ids = (data.messages ?? []).map(m => m.id).slice(0, 5);
+  const msgs = await Promise.all(ids.map(id =>
+    gapi(`/messages/${id}?format=METADATA&metadataHeaders=Subject&fields=snippet,payload/headers`)
+      .catch(() => null)
+  ));
+  return msgs.filter(Boolean).map(m => ({
+    subject: m.payload?.headers?.find(h => h.name === "Subject")?.value ?? "(no subject)",
+    snippet: m.snippet ?? ""
+  }));
+}
+
+
 const HANDLERS = {
   ping: async () => ({ ok: true }),
   auth: async () => {
