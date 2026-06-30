@@ -14,11 +14,13 @@ type Sender = {
 type Period = "1m" | "3m" | "1y" | "all";
 
 const PERIOD_LABELS: Record<Period, string> = {
-  "1m": "More than 1 month",
-  "3m": "More than 3 months",
-  "1y": "More than 1 year",
+  "1m": "Older than 1 month",
+  "3m": "Older than 3 months",
+  "1y": "Older than 1 year",
   all: "All time",
 };
+
+type Toast = { msg: string; type: "success" | "error"; trashLink?: boolean };
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -31,16 +33,16 @@ export default function Home() {
   } | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("all");
   const [processing, setProcessing] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const [unsubscribeResult, setUnsubscribeResult] = useState<{
     unsubscribed: boolean;
     unsubscribeUrl: string | null;
     isOneClick: boolean;
   } | null>(null);
 
-  const showToast = (msg: string, type: "success" | "error") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
+  const showToast = (msg: string, type: "success" | "error", trashLink = false) => {
+    setToast({ msg, type, trashLink });
+    setTimeout(() => setToast(null), 6000);
   };
 
   const loadSenders = useCallback(async () => {
@@ -76,7 +78,8 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      showToast(`Deleted ${data.deleted} emails from ${pendingAction.sender.email}`, "success");
+      const verb = permanent ? "Permanently deleted" : "Trashed";
+      showToast(`${verb} ${data.deleted} emails from ${pendingAction.sender.email}`, "success", !permanent);
       setPendingAction(null);
       await loadSenders();
     } catch (e) {
@@ -92,7 +95,6 @@ export default function Home() {
     setUnsubscribeResult(null);
 
     try {
-      // Step 1: Unsubscribe
       const uRes = await fetch("/api/gmail/unsubscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,7 +103,6 @@ export default function Home() {
       const uData = await uRes.json();
       setUnsubscribeResult(uData);
 
-      // Step 2: Delete
       const dRes = await fetch("/api/gmail/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,13 +116,13 @@ export default function Home() {
       if (!dRes.ok) throw new Error(dData.error);
 
       if (uData.unsubscribed) {
-        showToast(`Unsubscribed + deleted ${dData.deleted} emails`, "success");
+        showToast(`Unsubscribed + trashed ${dData.deleted} emails`, "success", true);
         setPendingAction(null);
         setUnsubscribeResult(null);
       } else if (uData.unsubscribeUrl) {
-        showToast(`Deleted ${dData.deleted} emails. Open link to complete unsubscribe.`, "success");
+        showToast(`Trashed ${dData.deleted} emails. Open link to complete unsubscribe.`, "success", true);
       } else {
-        showToast(`Deleted ${dData.deleted} emails (no unsubscribe link found)`, "success");
+        showToast(`Trashed ${dData.deleted} emails (no unsubscribe link found)`, "success", true);
         setPendingAction(null);
         setUnsubscribeResult(null);
       }
@@ -141,7 +142,7 @@ export default function Home() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900">
         Loading...
       </div>
     );
@@ -149,14 +150,14 @@ export default function Home() {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white gap-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold mb-2">Simple Mail Cleaner</h1>
-          <p className="text-gray-400">Clean up your inbox by sender. Unsubscribe and delete in one click.</p>
+          <h1 className="text-3xl font-bold mb-2 text-slate-900">Simple Mail Cleaner</h1>
+          <p className="text-slate-500">Clean up your inbox by sender. Unsubscribe and delete in one click.</p>
         </div>
         <button
           onClick={() => signIn("google")}
-          className="bg-white text-gray-900 font-medium px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors"
+          className="bg-teal-600 text-white font-medium px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors shadow-sm"
         >
           Sign in with Google
         </button>
@@ -165,18 +166,18 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold">Simple Mail Cleaner</h1>
-          {loading && <span className="text-sm text-gray-500">Loading senders...</span>}
+          <h1 className="text-lg font-semibold text-slate-900">Simple Mail Cleaner</h1>
+          {loading && <span className="text-sm text-slate-400">Loading...</span>}
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">{session.user?.email}</span>
+          <span className="text-sm text-slate-400">{session.user?.email}</span>
           <button
             onClick={() => signOut()}
-            className="text-sm text-gray-500 hover:text-white transition-colors"
+            className="text-sm text-slate-400 hover:text-slate-700 transition-colors"
           >
             Sign out
           </button>
@@ -184,16 +185,16 @@ export default function Home() {
       </header>
 
       {/* Search */}
-      <div className="px-6 py-4 border-b border-gray-800">
+      <div className="px-6 py-4 border-b border-slate-200 bg-white">
         <input
           type="text"
           placeholder="Search by sender name or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-500"
+          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
         />
         {!loading && (
-          <p className="text-xs text-gray-600 mt-2">
+          <p className="text-xs text-slate-400 mt-2">
             {filtered.length} sender{filtered.length !== 1 ? "s" : ""}
             {search && ` for "${search}"`}
           </p>
@@ -201,21 +202,21 @@ export default function Home() {
       </div>
 
       {/* Sender list */}
-      <div className="divide-y divide-gray-800">
+      <div className="divide-y divide-slate-100">
         {filtered.map((sender) => (
           <div
             key={sender.email}
-            className="px-6 py-4 flex items-center justify-between hover:bg-gray-900 transition-colors"
+            className="px-6 py-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-medium truncate">{sender.name}</span>
-                <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full shrink-0">
+                <span className="font-medium text-slate-900 truncate">{sender.name}</span>
+                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full shrink-0">
                   {sender.count}
                 </span>
               </div>
-              <div className="text-sm text-gray-500 truncate">{sender.email}</div>
-              <div className="text-xs text-gray-600 truncate mt-0.5">{sender.sampleSubject}</div>
+              <div className="text-sm text-slate-400 truncate">{sender.email}</div>
+              <div className="text-xs text-slate-300 truncate mt-0.5">{sender.sampleSubject}</div>
             </div>
             <div className="flex items-center gap-2 ml-4 shrink-0">
               <button
@@ -224,7 +225,7 @@ export default function Home() {
                   setSelectedPeriod("all");
                   setUnsubscribeResult(null);
                 }}
-                className="text-xs bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-3 py-1.5 rounded transition-colors"
+                className="text-xs bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
               >
                 Unsubscribe & Clean
               </button>
@@ -233,7 +234,7 @@ export default function Home() {
                   setPendingAction({ sender, mode: "delete" });
                   setSelectedPeriod("all");
                 }}
-                className="text-xs bg-red-900 hover:bg-red-800 text-red-200 px-3 py-1.5 rounded transition-colors"
+                className="text-xs bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
               >
                 Clean Out
               </button>
@@ -241,33 +242,35 @@ export default function Home() {
           </div>
         ))}
         {!loading && filtered.length === 0 && (
-          <div className="px-6 py-16 text-center text-gray-600">No senders found</div>
+          <div className="px-6 py-16 text-center text-slate-400 bg-white">No senders found</div>
         )}
       </div>
 
       {/* Action modal */}
       {pendingAction && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6">
-            <h2 className="text-lg font-semibold mb-1">
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">
               {pendingAction.mode === "unsubscribe" ? "Unsubscribe & Clean" : "Clean Out"}
             </h2>
-            <p className="text-sm text-gray-400 mb-5">
-              From: <span className="text-white">{pendingAction.sender.email}</span>
+            <p className="text-sm text-slate-500 mb-5">
+              Acts on <b className="text-slate-900">every</b> email from{" "}
+              <span className="font-medium text-slate-900">{pendingAction.sender.email}</span>,
+              not only the one you selected.
               <br />
-              <span className="text-gray-500">{pendingAction.sender.count} emails in inbox</span>
+              <span className="text-slate-400">{pendingAction.sender.count} emails in inbox</span>
             </p>
 
-            <p className="text-sm font-medium mb-3">Delete which emails?</p>
-            <div className="grid grid-cols-2 gap-2 mb-6">
+            <p className="text-sm font-semibold text-slate-800 mb-3">Delete which emails?</p>
+            <div className="grid grid-cols-2 gap-2 mb-5">
               {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
                 <button
                   key={p}
                   onClick={() => setSelectedPeriod(p)}
-                  className={`px-3 py-2 rounded text-sm transition-colors ${
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     selectedPeriod === p
-                      ? "bg-white text-gray-900 font-medium"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      ? "bg-teal-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
                   {PERIOD_LABELS[p]}
@@ -276,13 +279,13 @@ export default function Home() {
             </div>
 
             {unsubscribeResult && !unsubscribeResult.unsubscribed && unsubscribeResult.unsubscribeUrl && (
-              <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded text-sm">
-                <p className="text-yellow-300 font-medium mb-1">Manual unsubscribe needed</p>
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                <p className="text-amber-800 font-medium mb-1">Manual unsubscribe needed</p>
                 <a
                   href={unsubscribeResult.unsubscribeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-yellow-400 hover:text-yellow-300 underline break-all text-xs"
+                  className="text-amber-700 hover:text-amber-900 underline break-all text-xs"
                 >
                   Open unsubscribe page
                 </a>
@@ -296,7 +299,7 @@ export default function Home() {
                   setUnsubscribeResult(null);
                 }}
                 disabled={processing}
-                className="flex-1 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 text-sm transition-colors disabled:opacity-50"
+                className="flex-1 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 text-sm font-medium transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -305,7 +308,7 @@ export default function Home() {
                 <button
                   onClick={handleUnsubscribeAndDelete}
                   disabled={processing}
-                  className="flex-1 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  className="flex-1 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
                 >
                   {processing ? "Working..." : "Unsubscribe + Delete"}
                 </button>
@@ -313,7 +316,7 @@ export default function Home() {
                 <button
                   onClick={() => handleDelete(false)}
                   disabled={processing}
-                  className="flex-1 py-2 rounded bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  className="flex-1 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition-colors disabled:opacity-50"
                 >
                   {processing ? "Deleting..." : "Move to Trash"}
                 </button>
@@ -324,7 +327,7 @@ export default function Home() {
               <button
                 onClick={() => handleDelete(true)}
                 disabled={processing}
-                className="w-full mt-2 py-2 rounded bg-gray-800 hover:bg-gray-700 text-red-400 text-sm transition-colors disabled:opacity-50"
+                className="w-full mt-2 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-rose-500 text-sm font-medium border border-slate-200 transition-colors disabled:opacity-50"
               >
                 {processing ? "Deleting..." : "Permanently Delete (no recovery)"}
               </button>
@@ -336,11 +339,24 @@ export default function Home() {
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg text-sm z-50 max-w-sm ${
-            toast.type === "success" ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"
+          className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-lg text-sm z-50 max-w-sm text-white leading-relaxed ${
+            toast.type === "success" ? "bg-teal-600" : "bg-rose-500"
           }`}
         >
           {toast.msg}
+          {toast.trashLink && (
+            <>
+              {" · "}
+              <a
+                href="https://mail.google.com/mail/u/0/#trash"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline opacity-85 hover:opacity-100"
+              >
+                View Trash
+              </a>
+            </>
+          )}
         </div>
       )}
     </div>
