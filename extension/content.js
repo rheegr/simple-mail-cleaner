@@ -224,6 +224,11 @@
       const verb = permanent ? "Permanently deleted" : "Trashed";
       updateToast(working, `${verb} ${totalDeleted} email${totalDeleted === 1 ? "" : "s"} from ${label}.`, "success");
     }
+
+    // The API moved the mail to Trash, but the open Gmail view doesn't know yet,
+    // so the rows linger until the user navigates. Re-fetch the current view so
+    // they disappear right away. Debounced so concurrent jobs refresh once.
+    scheduleRefresh();
   }
 
   // Uncheck every currently-selected Gmail row so the next pick starts clean.
@@ -234,6 +239,24 @@
       if (checked && cb) cb.click();
     }
     lastKey = "__force__"; // force the action bar to re-evaluate and hide
+  }
+
+  // Click Gmail's own Refresh button to re-fetch the current list view.
+  function refreshGmail() {
+    const els = document.querySelectorAll("[role='button'][aria-label], [data-tooltip]");
+    for (const el of els) {
+      const label = el.getAttribute("aria-label") || el.getAttribute("data-tooltip") || "";
+      if (/refresh|새로고침/i.test(label)) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+  let refreshTimer = null;
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshGmail, 700);
   }
 
   // ---- UI: toast (stacked, dismiss after `duration` ms; 0 = sticky) ----
