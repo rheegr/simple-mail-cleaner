@@ -311,17 +311,17 @@
     spamPanel = document.createElement("div");
     spamPanel.id = "smc-radar";
     spamPanel.innerHTML = `
-      <button id="smc-radar-toggle">
-        <span id="smc-radar-title">Spam Radar</span>
-        <span id="smc-radar-arrow">&#9650;</span>
-      </button>
       <div id="smc-radar-body">
         <div id="smc-radar-meta">
-          <span id="smc-radar-subtitle">Top senders by spam signal</span>
+          <span id="smc-radar-subtitle">Top senders by volume</span>
           <button id="smc-radar-refresh" title="Refresh">&#8635;</button>
         </div>
         <div id="smc-radar-list"></div>
       </div>
+      <button id="smc-radar-toggle">
+        <span id="smc-radar-title">Spam Radar</span>
+        <span id="smc-radar-arrow">&#9650;</span>
+      </button>
     `;
     document.body.appendChild(spamPanel);
     spamListEl = spamPanel.querySelector("#smc-radar-list");
@@ -395,10 +395,43 @@
           </div>
         </div>
         ${tags.length ? `<div class="smc-radar-tags">${tags.map(t => `<span class="smc-rtag">${t}</span>`).join("")}</div>` : ""}
+        <button class="smc-preview-toggle">Show recent emails &#9662;</button>
+        <div class="smc-preview-pane" style="display:none"></div>
       `;
-      const [unsubBtn, cleanBtn] = row.querySelectorAll("button");
-      unsubBtn.addEventListener("click", () => openModalFor("unsubscribe", s));
-      cleanBtn.addEventListener("click", () => openModalFor("delete", s));
+      const btns = row.querySelectorAll("button");
+      btns[0].addEventListener("click", () => openModalFor("unsubscribe", s));
+      btns[1].addEventListener("click", () => openModalFor("delete", s));
+      const previewBtn = btns[2];
+      const previewPane = row.querySelector(".smc-preview-pane");
+      let previewLoaded = false;
+      previewBtn.addEventListener("click", async () => {
+        const isOpen = previewPane.style.display !== "none";
+        if (isOpen) {
+          previewPane.style.display = "none";
+          previewBtn.innerHTML = "Show recent emails &#9662;";
+          return;
+        }
+        previewPane.style.display = "block";
+        previewBtn.innerHTML = "Hide &#9652;";
+        if (previewLoaded) return;
+        previewPane.innerHTML = `<div class="smc-preview-loading">Loading...</div>`;
+        try {
+          const msgs = await send("senderPreview", { senderEmail: s.email });
+          previewLoaded = true;
+          if (!msgs || msgs.length === 0) {
+            previewPane.innerHTML = `<div class="smc-preview-empty">No recent emails found.</div>`;
+            return;
+          }
+          previewPane.innerHTML = msgs.map(m => `
+            <div class="smc-preview-item">
+              <div class="smc-preview-subject">${escapeHtml(m.subject)}</div>
+              <div class="smc-preview-snippet">${escapeHtml(m.snippet)}</div>
+            </div>
+          `).join("");
+        } catch(e) {
+          previewPane.innerHTML = `<div class="smc-preview-empty">Error: ${escapeHtml(e.message)}</div>`;
+        }
+      });
       spamListEl.appendChild(row);
     }
   }
