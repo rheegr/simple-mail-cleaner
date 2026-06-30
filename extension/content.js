@@ -1,6 +1,6 @@
-// InboxPurge content script — runs inside Gmail.
+// Simple Mail Cleaner content script — runs inside Gmail.
 // Watches the message list for selected rows, surfaces an action bar, and on
-// confirmation tells the background worker to Super Unsubscribe / Super Delete
+// confirmation tells the background worker to Unsubscribe & Clean / Clean Out
 // the WHOLE sender of each selected email.
 
 (() => {
@@ -52,16 +52,16 @@
   let bar, barCount;
   function buildBar() {
     bar = document.createElement("div");
-    bar.id = "ipg-bar";
+    bar.id = "smc-bar";
     bar.innerHTML = `
-      <span id="ipg-bar-count"></span>
-      <button id="ipg-unsub" class="ipg-btn ipg-btn-indigo">Super Unsubscribe</button>
-      <button id="ipg-del" class="ipg-btn ipg-btn-red">Super Delete</button>
+      <span id="smc-bar-count"></span>
+      <button id="smc-unsub" class="smc-btn smc-btn-teal">Unsubscribe &amp; Clean</button>
+      <button id="smc-del" class="smc-btn smc-btn-rose">Clean Out</button>
     `;
     document.body.appendChild(bar);
-    barCount = bar.querySelector("#ipg-bar-count");
-    bar.querySelector("#ipg-unsub").addEventListener("click", () => openModal("unsubscribe"));
-    bar.querySelector("#ipg-del").addEventListener("click", () => openModal("delete"));
+    barCount = bar.querySelector("#smc-bar-count");
+    bar.querySelector("#smc-unsub").addEventListener("click", () => openModal("unsubscribe"));
+    bar.querySelector("#smc-del").addEventListener("click", () => openModal("delete"));
   }
 
   let lastKey = "";
@@ -71,11 +71,11 @@
     if (key === lastKey) return;
     lastKey = key;
     if (senders.length === 0) {
-      bar.classList.remove("ipg-show");
+      bar.classList.remove("smc-show");
     } else {
       const n = senders.length;
       barCount.textContent = `${n} sender${n > 1 ? "s" : ""} selected`;
-      bar.classList.add("ipg-show");
+      bar.classList.add("smc-show");
     }
   }
 
@@ -90,82 +90,82 @@
 
     if (modal) modal.remove();
     modal = document.createElement("div");
-    modal.id = "ipg-overlay";
+    modal.id = "smc-overlay";
 
     const isUnsub = mode === "unsubscribe";
-    const title = isUnsub ? "Super Unsubscribe" : "Super Delete";
+    const title = isUnsub ? "Unsubscribe & Clean" : "Clean Out";
 
     modal.innerHTML = `
-      <div id="ipg-modal">
+      <div id="smc-modal">
         <h2>${title}</h2>
-        <p class="ipg-sub">Acts on <b>every</b> email from ${senders.length} sender${
+        <p class="smc-sub">Acts on <b>every</b> email from ${senders.length} sender${
       senders.length > 1 ? "s" : ""
     } below, not only the messages you selected.</p>
-        <div id="ipg-senders"></div>
-        <p class="ipg-label">Delete which emails?</p>
-        <div id="ipg-periods"></div>
+        <div id="smc-senders"></div>
+        <p class="smc-label">Delete which emails?</p>
+        <div id="smc-periods"></div>
         ${
           isUnsub
             ? ""
-            : `<label class="ipg-perm"><input type="checkbox" id="ipg-permanent"> Permanently delete (skip Trash, no recovery)</label>`
+            : `<label class="smc-perm"><input type="checkbox" id="smc-permanent"> Permanently delete (skip Trash, no recovery)</label>`
         }
-        <div id="ipg-actions">
-          <button id="ipg-cancel" class="ipg-btn ipg-btn-gray">Cancel</button>
-          <button id="ipg-confirm" class="ipg-btn ${isUnsub ? "ipg-btn-indigo" : "ipg-btn-red"}">${
+        <div id="smc-actions">
+          <button id="smc-cancel" class="smc-btn smc-btn-gray">Cancel</button>
+          <button id="smc-confirm" class="smc-btn ${isUnsub ? "smc-btn-teal" : "smc-btn-rose"}">${
       isUnsub ? "Unsubscribe + Delete" : "Move to Trash"
     }</button>
         </div>
-        <div id="ipg-progress"></div>
+        <div id="smc-progress"></div>
       </div>`;
     document.body.appendChild(modal);
 
     // sender rows with lazy counts
-    const list = modal.querySelector("#ipg-senders");
+    const list = modal.querySelector("#smc-senders");
     for (const s of senders) {
       const row = document.createElement("div");
-      row.className = "ipg-srow";
-      row.innerHTML = `<span class="ipg-sname">${escapeHtml(s.name)}</span>
-        <span class="ipg-semail">${escapeHtml(s.email)}</span>
-        <span class="ipg-scount" data-email="${escapeHtml(s.email)}">…</span>`;
+      row.className = "smc-srow";
+      row.innerHTML = `<span class="smc-sname">${escapeHtml(s.name)}</span>
+        <span class="smc-semail">${escapeHtml(s.email)}</span>
+        <span class="smc-scount" data-email="${escapeHtml(s.email)}">…</span>`;
       list.appendChild(row);
       send("count", { senderEmail: s.email })
         .then((c) => {
-          const el = list.querySelector(`.ipg-scount[data-email="${cssEscape(s.email)}"]`);
+          const el = list.querySelector(`.smc-scount[data-email="${cssEscape(s.email)}"]`);
           if (el) el.textContent = `${c}`;
         })
         .catch(() => {});
     }
 
     // period buttons
-    const periodsEl = modal.querySelector("#ipg-periods");
+    const periodsEl = modal.querySelector("#smc-periods");
     PERIODS.forEach((p) => {
       const b = document.createElement("button");
-      b.className = "ipg-period" + (p.key === period ? " ipg-period-on" : "");
+      b.className = "smc-period" + (p.key === period ? " smc-period-on" : "");
       b.textContent = p.label;
       b.addEventListener("click", () => {
         period = p.key;
-        periodsEl.querySelectorAll(".ipg-period").forEach((x) => x.classList.remove("ipg-period-on"));
-        b.classList.add("ipg-period-on");
-        const permEl = modal.querySelector("#ipg-confirm");
+        periodsEl.querySelectorAll(".smc-period").forEach((x) => x.classList.remove("smc-period-on"));
+        b.classList.add("smc-period-on");
+        const permEl = modal.querySelector("#smc-confirm");
         if (!isUnsub) permEl.textContent = permanent ? "Permanently Delete" : "Move to Trash";
       });
       periodsEl.appendChild(b);
     });
 
     if (!isUnsub) {
-      modal.querySelector("#ipg-permanent").addEventListener("change", (e) => {
+      modal.querySelector("#smc-permanent").addEventListener("change", (e) => {
         permanent = e.target.checked;
-        modal.querySelector("#ipg-confirm").textContent = permanent
+        modal.querySelector("#smc-confirm").textContent = permanent
           ? "Permanently Delete"
           : "Move to Trash";
       });
     }
 
-    modal.querySelector("#ipg-cancel").addEventListener("click", () => closeModal());
+    modal.querySelector("#smc-cancel").addEventListener("click", () => closeModal());
     modal.addEventListener("click", (e) => {
       if (e.target === modal) closeModal();
     });
-    modal.querySelector("#ipg-confirm").addEventListener("click", () =>
+    modal.querySelector("#smc-confirm").addEventListener("click", () =>
       runAction({ mode, senders, getPeriod: () => period, getPermanent: () => permanent })
     );
   }
@@ -176,9 +176,9 @@
   }
 
   async function runAction({ mode, senders, getPeriod, getPermanent }) {
-    const confirmBtn = modal.querySelector("#ipg-confirm");
-    const cancelBtn = modal.querySelector("#ipg-cancel");
-    const progress = modal.querySelector("#ipg-progress");
+    const confirmBtn = modal.querySelector("#smc-confirm");
+    const cancelBtn = modal.querySelector("#smc-cancel");
+    const progress = modal.querySelector("#smc-progress");
     confirmBtn.disabled = true;
     cancelBtn.disabled = true;
 
@@ -227,7 +227,7 @@
   // ---- UI: toast ----
   function toast(msg, type) {
     const t = document.createElement("div");
-    t.className = `ipg-toast ipg-toast-${type}`;
+    t.className = `smc-toast smc-toast-${type}`;
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 6000);
@@ -243,7 +243,7 @@
 
   // ---- boot ----
   function init() {
-    if (document.getElementById("ipg-bar")) return;
+    if (document.getElementById("smc-bar")) return;
     buildBar();
     // Gmail fires no clean selection event; poll the (cheap) DOM query.
     setInterval(refreshBar, 400);

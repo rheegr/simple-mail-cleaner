@@ -1,4 +1,4 @@
-// InboxPurge background service worker.
+// Simple Mail Cleaner background service worker.
 // Handles OAuth (chrome.identity) and all Gmail API calls. The content script
 // (running inside Gmail) cannot call the API directly, so it messages us here.
 

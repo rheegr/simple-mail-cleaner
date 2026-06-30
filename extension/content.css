@@ -1,6 +1,6 @@
-/* InboxPurge injected UI. All selectors prefixed ipg- to avoid clashing with Gmail. */
+/* Simple Mail Cleaner injected UI. All selectors prefixed smc- to avoid clashing with Gmail. */
 
-#ipg-bar {
+#smc-bar {
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -9,139 +9,142 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  background: #111827;
-  color: #fff;
-  border: 1px solid #374151;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 10px 14px 10px 18px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
   font-family: "Google Sans", Roboto, Arial, sans-serif;
   font-size: 13px;
   opacity: 0;
   transition: transform 0.18s ease, opacity 0.18s ease;
   pointer-events: none;
 }
-#ipg-bar.ipg-show {
+#smc-bar.smc-show {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
-#ipg-bar-count {
-  color: #9ca3af;
+#smc-bar-count {
+  color: #475569;
+  font-weight: 500;
   margin-right: 4px;
 }
 
-.ipg-btn {
+.smc-btn {
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   padding: 8px 14px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.12s ease;
 }
-.ipg-btn:disabled { opacity: 0.5; cursor: default; }
-.ipg-btn-indigo { background: #4f46e5; color: #fff; }
-.ipg-btn-indigo:hover:not(:disabled) { background: #6366f1; }
-.ipg-btn-red { background: #b91c1c; color: #fff; }
-.ipg-btn-red:hover:not(:disabled) { background: #dc2626; }
-.ipg-btn-gray { background: #374151; color: #e5e7eb; }
-.ipg-btn-gray:hover:not(:disabled) { background: #4b5563; }
+.smc-btn:disabled { opacity: 0.5; cursor: default; }
+.smc-btn-teal { background: #0d9488; color: #fff; }
+.smc-btn-teal:hover:not(:disabled) { background: #0f766e; }
+.smc-btn-rose { background: #e11d48; color: #fff; }
+.smc-btn-rose:hover:not(:disabled) { background: #be123c; }
+.smc-btn-gray { background: #f1f5f9; color: #334155; }
+.smc-btn-gray:hover:not(:disabled) { background: #e2e8f0; }
 
-#ipg-overlay {
+#smc-overlay {
   position: fixed;
   inset: 0;
   z-index: 2147483600;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(15, 23, 42, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: "Google Sans", Roboto, Arial, sans-serif;
 }
-#ipg-modal {
+#smc-modal {
   width: 460px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: #1f2937;
-  color: #f9fafb;
-  border: 1px solid #374151;
-  border-radius: 14px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
   padding: 22px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
 }
-#ipg-modal h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
-.ipg-sub { margin: 0 0 14px; font-size: 13px; color: #9ca3af; line-height: 1.5; }
-.ipg-sub b { color: #f3f4f6; }
+#smc-modal h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; color: #0f172a; }
+.smc-sub { margin: 0 0 14px; font-size: 13px; color: #64748b; line-height: 1.5; }
+.smc-sub b { color: #0f172a; }
 
-#ipg-senders {
-  border: 1px solid #374151;
-  border-radius: 8px;
+#smc-senders {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   margin-bottom: 16px;
   max-height: 160px;
   overflow-y: auto;
 }
-.ipg-srow {
+.smc-srow {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid #e2e8f0;
   font-size: 13px;
 }
-.ipg-srow:last-child { border-bottom: none; }
-.ipg-sname { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
-.ipg-semail { color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-.ipg-scount {
-  background: #374151;
-  color: #d1d5db;
+.smc-srow:last-child { border-bottom: none; }
+.smc-sname { font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.smc-semail { color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.smc-scount {
+  background: #f1f5f9;
+  color: #475569;
   border-radius: 999px;
   padding: 2px 9px;
   font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.ipg-label { font-size: 13px; font-weight: 500; margin: 0 0 8px; }
-#ipg-periods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-.ipg-period {
-  background: #374151;
-  color: #d1d5db;
+.smc-label { font-size: 13px; font-weight: 600; color: #1e293b; margin: 0 0 8px; }
+#smc-periods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.smc-period {
+  background: #f1f5f9;
+  color: #475569;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   padding: 9px;
   font-size: 13px;
   cursor: pointer;
   font-family: inherit;
 }
-.ipg-period:hover { background: #4b5563; }
-.ipg-period-on { background: #fff; color: #111827; font-weight: 600; }
+.smc-period:hover { background: #e2e8f0; }
+.smc-period-on { background: #0d9488; color: #fff; font-weight: 600; }
 
-.ipg-perm {
+.smc-perm {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12.5px;
-  color: #fca5a5;
+  color: #e11d48;
   margin-bottom: 16px;
   cursor: pointer;
 }
 
-#ipg-actions { display: flex; gap: 10px; }
-#ipg-actions .ipg-btn { flex: 1; padding: 10px; }
-#ipg-progress { margin-top: 12px; font-size: 12.5px; color: #9ca3af; min-height: 16px; }
+#smc-actions { display: flex; gap: 10px; }
+#smc-actions .smc-btn { flex: 1; padding: 10px; }
+#smc-progress { margin-top: 12px; font-size: 12.5px; color: #64748b; min-height: 16px; }
 
-.ipg-toast {
+.smc-toast {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 2147483600;
   max-width: 380px;
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 11px;
+  color: #fff;
   font-family: "Google Sans", Roboto, Arial, sans-serif;
   font-size: 13px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
 }
-.ipg-toast-success { background: #064e3b; color: #d1fae5; }
-.ipg-toast-error { background: #7f1d1d; color: #fecaca; }
+.smc-toast-success { background: #0d9488; }
+.smc-toast-error { background: #e11d48; }
