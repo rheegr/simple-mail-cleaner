@@ -363,6 +363,8 @@
 
   function whyTags(s) {
     const t = [];
+    if ((s.categoryRatio ?? 0) >= 0.8) t.push("Auto-filed");
+    else if ((s.categoryRatio ?? 0) >= 0.4) t.push("Often auto-filed");
     if (s.unreadRatio >= 0.8) t.push("Never read");
     else if (s.unreadRatio >= 0.5) t.push("Rarely read");
     if (s.hasUnsub) t.push("Newsletter");
