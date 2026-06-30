@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "InboxPurge",
+  "version": "0.1.0",
+  "description": "Select an email in Gmail and Super Unsubscribe or Super Delete its entire sender in one click.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsdpvJUwluam76TdDqTg6vk0GcQ2AmJ3840AeH9d/TLIkQwoRgxP6wQQlVYR82QoHPJTKfDY0zU8JjFo27W6RBp77sM40UTS4ee+ARlFgIQXAeN3tXpWICV5GrVzy6EJXAtLe2UcfP7l6XNhd2fQXxf3sVT0Yq9STo1vZwxBimDvjalS5ZIJPPH3nhwUDQzUJkKHaqeDbiCG8TkkP/vUrPHdkOJ46UiU2DjSHb+3Q4gTHmWdWDvDOywoyUpLcUA/utg44WF19GmMYhwt/CggvDtGJNL7VBkeb4/VOxHbRBCSm3QGaK2xlHcXMTEPq1Jwod+gw30GU4aGF7QG2+LhPhwIDAQAB",
+  "permissions": ["identity", "storage", "scripting", "tabs"],
+  "host_permissions": [
+    "https://gmail.googleapis.com/*",
+    "https://oauth2.googleapis.com/*",
+    "https://*.hubspotemail.net/*",
+    "https://*.list-manage.com/*",
+    "https://*.substack.com/*",
+    "https://*.mailchimp.com/*"
+  ],
+  "oauth2": {
+    "client_id": "76451738783-e6torhr8g4upgnel92g49b5b1ndbjgiu.apps.googleusercontent.com",
+    "scopes": ["https://mail.google.com/"]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "InboxPurge"
+  }
+}

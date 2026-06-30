@@ -1,0 +1,147 @@
+/* InboxPurge injected UI. All selectors prefixed ipg- to avoid clashing with Gmail. */
+
+#ipg-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #111827;
+  color: #fff;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  font-family: "Google Sans", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  opacity: 0;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+  pointer-events: none;
+}
+#ipg-bar.ipg-show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+#ipg-bar-count {
+  color: #9ca3af;
+  margin-right: 4px;
+}
+
+.ipg-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s ease;
+}
+.ipg-btn:disabled { opacity: 0.5; cursor: default; }
+.ipg-btn-indigo { background: #4f46e5; color: #fff; }
+.ipg-btn-indigo:hover:not(:disabled) { background: #6366f1; }
+.ipg-btn-red { background: #b91c1c; color: #fff; }
+.ipg-btn-red:hover:not(:disabled) { background: #dc2626; }
+.ipg-btn-gray { background: #374151; color: #e5e7eb; }
+.ipg-btn-gray:hover:not(:disabled) { background: #4b5563; }
+
+#ipg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483600;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Google Sans", Roboto, Arial, sans-serif;
+}
+#ipg-modal {
+  width: 460px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: #1f2937;
+  color: #f9fafb;
+  border: 1px solid #374151;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+#ipg-modal h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+.ipg-sub { margin: 0 0 14px; font-size: 13px; color: #9ca3af; line-height: 1.5; }
+.ipg-sub b { color: #f3f4f6; }
+
+#ipg-senders {
+  border: 1px solid #374151;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.ipg-srow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #374151;
+  font-size: 13px;
+}
+.ipg-srow:last-child { border-bottom: none; }
+.ipg-sname { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.ipg-semail { color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.ipg-scount {
+  background: #374151;
+  color: #d1d5db;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ipg-label { font-size: 13px; font-weight: 500; margin: 0 0 8px; }
+#ipg-periods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.ipg-period {
+  background: #374151;
+  color: #d1d5db;
+  border: none;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ipg-period:hover { background: #4b5563; }
+.ipg-period-on { background: #fff; color: #111827; font-weight: 600; }
+
+.ipg-perm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #fca5a5;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+#ipg-actions { display: flex; gap: 10px; }
+#ipg-actions .ipg-btn { flex: 1; padding: 10px; }
+#ipg-progress { margin-top: 12px; font-size: 12.5px; color: #9ca3af; min-height: 16px; }
+
+.ipg-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483600;
+  max-width: 380px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-family: "Google Sans", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+.ipg-toast-success { background: #064e3b; color: #d1fae5; }
+.ipg-toast-error { background: #7f1d1d; color: #fecaca; }
