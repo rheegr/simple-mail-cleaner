@@ -176,14 +176,20 @@
   }
 
   async function runAction({ mode, senders, getPeriod, getPermanent }) {
-    const confirmBtn = modal.querySelector("#smc-confirm");
-    const cancelBtn = modal.querySelector("#smc-cancel");
-    const progress = modal.querySelector("#smc-progress");
-    confirmBtn.disabled = true;
-    cancelBtn.disabled = true;
-
     const period = getPeriod();
     const permanent = getPermanent();
+
+    // The job targets whole senders (already captured), so the Gmail selection
+    // is no longer needed. Close the modal and clear the selection immediately
+    // so the user can keep working on other senders while this runs in the
+    // background — no lingering checkboxes piling up into the next pick.
+    closeModal();
+    deselectAll();
+
+    const label = senders.length === 1 ? senders[0].email : `${senders.length} senders`;
+    const verbing = mode === "unsubscribe" ? "Unsubscribing + clearing" : "Clearing";
+    const working = toast(`${verbing} ${label}… keep going, this runs in the background.`, "working", 0);
+
     let totalDeleted = 0;
     let autoUnsub = 0; // one-click / mailto / page auto-click
     let pageManual = 0; // unknown provider page opened for manual finish
@@ -192,7 +198,6 @@
 
     for (let i = 0; i < senders.length; i++) {
       const s = senders[i];
-      progress.textContent = `Working on ${s.email} (${i + 1}/${senders.length})…`;
       try {
         if (mode === "unsubscribe") {
           const u = await send("unsubscribe", { senderEmail: s.email });
@@ -208,29 +213,53 @@
       }
     }
 
-    closeModal();
-    lastKey = "__force__"; // force bar refresh after Gmail updates
-
     if (mode === "unsubscribe") {
       const parts = [`Trashed ${totalDeleted} email${totalDeleted === 1 ? "" : "s"}`];
       if (autoUnsub) parts.push(`unsubscribed ${autoUnsub} automatically`);
       if (pageManual) parts.push(`${pageManual} page${pageManual === 1 ? "" : "s"} opened to finish manually`);
       if (groupPages) parts.push(`${groupPages} Google Group${groupPages === 1 ? "" : "s"} opened — leave manually if you want`);
       if (noneUnsub) parts.push(`${noneUnsub} had no unsubscribe link`);
-      toast(parts.join(" · ") + ".", "success");
+      updateToast(working, parts.join(" · ") + ".", "success");
     } else {
       const verb = permanent ? "Permanently deleted" : "Trashed";
-      toast(`${verb} ${totalDeleted} email${totalDeleted === 1 ? "" : "s"}.`, "success");
+      updateToast(working, `${verb} ${totalDeleted} email${totalDeleted === 1 ? "" : "s"} from ${label}.`, "success");
     }
   }
 
-  // ---- UI: toast ----
-  function toast(msg, type) {
+  // Uncheck every currently-selected Gmail row so the next pick starts clean.
+  function deselectAll() {
+    for (const row of document.querySelectorAll("tr.zA")) {
+      const cb = row.querySelector('[role="checkbox"]');
+      const checked = row.classList.contains("x7") || (cb && cb.getAttribute("aria-checked") === "true");
+      if (checked && cb) cb.click();
+    }
+    lastKey = "__force__"; // force the action bar to re-evaluate and hide
+  }
+
+  // ---- UI: toast (stacked, dismiss after `duration` ms; 0 = sticky) ----
+  function toastContainer() {
+    let c = document.getElementById("smc-toasts");
+    if (!c) {
+      c = document.createElement("div");
+      c.id = "smc-toasts";
+      document.body.appendChild(c);
+    }
+    return c;
+  }
+  function toast(msg, type, duration = 6000) {
     const t = document.createElement("div");
     t.className = `smc-toast smc-toast-${type}`;
     t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 6000);
+    toastContainer().appendChild(t);
+    if (duration > 0) setTimeout(() => t.remove(), duration);
+    return t;
+  }
+  function updateToast(t, msg, type, duration = 6000) {
+    if (!t || !t.isConnected) return toast(msg, type, duration);
+    t.className = `smc-toast smc-toast-${type}`;
+    t.textContent = msg;
+    if (duration > 0) setTimeout(() => t.remove(), duration);
+    return t;
   }
 
   // ---- helpers ----
