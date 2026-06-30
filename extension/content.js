@@ -219,10 +219,12 @@
       if (pageManual) parts.push(`${pageManual} page${pageManual === 1 ? "" : "s"} opened to finish manually`);
       if (groupPages) parts.push(`${groupPages} Google Group${groupPages === 1 ? "" : "s"} opened — leave manually if you want`);
       if (noneUnsub) parts.push(`${noneUnsub} had no unsubscribe link`);
-      updateToast(working, parts.join(" · ") + ".", "success");
+      const trashLinkU = ' · <a href="https://mail.google.com/mail/u/0/#trash" target="_blank" style="color:#fff;text-decoration:underline;opacity:0.85">View Trash</a>';
+      updateToastHtml(working, parts.join(" · ") + "." + trashLinkU, "success");
     } else {
       const verb = permanent ? "Permanently deleted" : "Trashed";
-      updateToast(working, `${verb} ${totalDeleted} email${totalDeleted === 1 ? "" : "s"} from ${label}.`, "success");
+      const trashLink = permanent ? "" : ' · <a href="https://mail.google.com/mail/u/0/#trash" target="_blank" style="color:#fff;text-decoration:underline;opacity:0.85">View Trash</a>';
+      updateToastHtml(working, `${verb} ${totalDeleted} email${totalDeleted === 1 ? "" : "s"} from ${label}.${trashLink}`, "success");
     }
 
     // The API moved the mail to Trash, but the open Gmail view doesn't know yet,
@@ -277,6 +279,20 @@
     if (duration > 0) setTimeout(() => t.remove(), duration);
     return t;
   }
+  function updateToastHtml(t, html, type, duration = 6000) {
+    if (!t || !t.isConnected) {
+      const el = document.createElement("div");
+      el.className = `smc-toast smc-toast-${type}`;
+      el.innerHTML = html;
+      toastContainer().appendChild(el);
+      if (duration > 0) setTimeout(() => el.remove(), duration);
+      return el;
+    }
+    t.className = `smc-toast smc-toast-${type}`;
+    t.innerHTML = html;
+    if (duration > 0) setTimeout(() => t.remove(), duration);
+    return t;
+  }
 
   // ---- helpers ----
   function escapeHtml(s) {
@@ -290,8 +306,13 @@
   function init() {
     if (document.getElementById("smc-bar")) return;
     buildBar();
-    // Gmail fires no clean selection event; poll the (cheap) DOM query.
-    setInterval(refreshBar, 400);
+    // Watch for Gmail DOM mutations (checkbox toggles, view switches) instead of
+    // polling — fires only when something actually changes, zero idle CPU cost.
+    const observer = new MutationObserver(() => refreshBar());
+    const main = document.querySelector('div[role="main"]') || document.body;
+    observer.observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-checked"] });
+    // Run once immediately in case emails are already selected on load.
+    refreshBar();
   }
 
   if (document.readyState === "loading") {
