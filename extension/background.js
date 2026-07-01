@@ -33,7 +33,7 @@ function removeToken(token) {
 
 // Fetch against the Gmail API with one automatic retry after a token refresh on 401.
 async function gapi(path, init = {}, _retried = false) {
-  const token = await getToken(!_retried ? true : true);
+  const token = await getToken(true);
   const res = await fetch(`${GMAIL}${path}`, {
     ...init,
     headers: {
