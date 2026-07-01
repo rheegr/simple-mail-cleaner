@@ -13,7 +13,7 @@
     "https://*.mailchimp.com/*"
   ],
   "oauth2": {
-    "client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+    "client_id": "76451738783-e6torhr8g4upgnel92g49b5b1ndbjgiu.apps.googleusercontent.com",
     "scopes": ["https://mail.google.com/"]
   },
   "background": {
