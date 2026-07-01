@@ -1,35 +1,48 @@
-# Simple Mail Cleaner (Chrome extension)
+# Simple Mail Cleaner
 
-Gmail 안에서 이메일을 선택하면 그 발신자 전체에 대해 수신거부(Unsubscribe & Clean) / 일괄삭제(Clean Out)를 실행하는 크롬 확장.
+A Chrome extension for Gmail that lets you unsubscribe and bulk-delete by sender in one click — not just the email you selected, but every email from that sender.
 
-## 동작
-- mail.google.com에 content script 주입.
-- Gmail 리스트에서 메일을 체크하면 화면 하단에 액션바가 뜸.
-- "Unsubscribe & Clean" 또는 "Clean Out" 클릭 → 확인 모달(기간 선택, 영구삭제 옵션) → 실행.
-- 액션은 선택한 메일이 아니라 그 메일의 **발신자 전체**에 적용됨.
-- 실제 Gmail API 호출(목록/삭제/수신거부)은 background service worker가 담당.
+**Gmail only.** Works exclusively on `mail.google.com` via the Gmail API.
 
-## 수신거부 우선순위
-1. 원클릭(RFC 8058) POST — 완전 자동, 페이지 없음.
-2. mailto — 사용자 Gmail에서 수신거부 메일 자동 발송.
-3. 알려진 제공사(HubSpot/Mailchimp/Substack) — 페이지를 열고 수신거부 버튼 자동 클릭.
-4. Google Groups — 페이지만 열고 수동(내부 그룹 실수 탈퇴 방지).
-5. 그 외 — 페이지를 열어 직접 처리.
+## What it does
 
-## 설치 (개발자 모드, unpacked)
-1. 크롬에서 `chrome://extensions` 열기.
-2. 우측 상단 "개발자 모드" 켜기.
-3. "압축해제된 확장 프로그램을 로드합니다" → 이 폴더(`C:\dev\inbox-purge\extension`) 선택.
-4. Gmail(mail.google.com) 열고 새로고침.
-5. 메일 체크 → 하단 액션바 → 버튼 클릭. 첫 실행 시 구글 OAuth 동의 화면이 한 번 뜸.
+- Select one or more emails in Gmail → an action bar appears at the bottom
+- **Unsubscribe & Clean** — attempts to unsubscribe automatically, then moves all emails from that sender to Trash
+- **Clean Out** — moves all emails from that sender to Trash (with optional permanent delete)
+- Choose a time range: all time, older than 1 year, 3 months, or 1 month
+- **Spam Radar** — a collapsible panel that scans your inbox and ranks senders by spam score (promo labels, unread ratio, newsletter headers, volume)
 
-## 구성
-- `manifest.json` — MV3. `key`로 확장 ID 고정(`jmhemkgmbplfkjbklimmkogkkibeiehl`), `oauth2`로 Chrome Extension OAuth client 연결.
-- `background.js` — chrome.identity 토큰, Gmail REST 호출.
-- `content.js` — 선택 감지, 액션바/모달/토스트 주입.
-- `content.css` — 주입 UI 스타일(`smc-` prefix).
+## Unsubscribe priority
 
-## 주의
-- `.key.pem`은 확장 ID 서명용 개인키. 커밋/공유 금지(.gitignore 처리).
-- Gmail 비공개 DOM 구조(`tr.zA`, `span[email]`)에 의존하므로 Gmail UI 변경 시 `content.js`의 선택 감지 로직 점검 필요.
-- OAuth 앱이 testing 상태라 test user(rheegr@gmail.com, gary@hashed.com)만 사용 가능.
+1. RFC 8058 one-click POST — fully automatic, no page opened
+2. `mailto:` — sends an unsubscribe email from your Gmail
+3. Known providers (HubSpot, Mailchimp, Substack) — opens the page and auto-clicks the unsubscribe button
+4. Google Groups — opens the page for manual review (to avoid accidentally leaving internal groups)
+5. Everything else — opens the page for manual action
+
+## Setup (self-hosted)
+
+This extension uses the Gmail API via Chrome's `chrome.identity`. To run it yourself:
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable the **Gmail API**
+3. Create an **OAuth 2.0 Client ID** of type *Chrome Extension*
+4. Copy the client ID into `manifest.json` under `oauth2.client_id`
+5. Open `chrome://extensions` in Chrome
+6. Enable **Developer mode** (top right)
+7. Click **Load unpacked** and select this folder
+8. Open Gmail, select some emails, and the action bar will appear
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `manifest.json` | MV3 manifest — permissions, OAuth config, content script declaration |
+| `background.js` | Service worker — handles OAuth tokens and all Gmail API calls |
+| `content.js` | Content script — injected into Gmail, handles UI (action bar, modal, toasts, Spam Radar) |
+| `content.css` | Styles for injected UI (`smc-` prefix throughout) |
+
+## Notes
+
+- Actions apply to the **entire sender**, not just the selected messages
+- Gmail's internal DOM (`tr.zA`, `span[email]`) is relied on for selection detection — may need updating if Gmail changes its markup
